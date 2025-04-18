@@ -52,7 +52,7 @@ struct {
   uint e;  // Edit index
 } cons;
 
-//
+// 
 // user write()s to the console go here.
 //
 int

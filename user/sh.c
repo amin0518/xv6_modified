@@ -72,13 +72,80 @@ runcmd(struct cmd *cmd)
   default:
     panic("runcmd");
 
+  // case EXEC:
+  //   ecmd = (struct execcmd*)cmd;
+  //   if(ecmd->argv[0] == 0)
+  //     exit(1);
+  //   exec(ecmd->argv[0], ecmd->argv);
+  //   fprintf(2, "exec %s failed\n", ecmd->argv[0]);
+  //   break;
   case EXEC:
-    ecmd = (struct execcmd*)cmd;
-    if(ecmd->argv[0] == 0)
-      exit(1);
-    exec(ecmd->argv[0], ecmd->argv);
-    fprintf(2, "exec %s failed\n", ecmd->argv[0]);
+  ecmd = (struct execcmd*)cmd;
+  if(ecmd->argv[0] == 0)
+    exit(1);
+
+  if(ecmd->argv[0][0] == '!') {
+    char msg[513];
+    int len = 0;
+
+    for(int i = 0; ecmd->argv[i]; i++) {
+      char *part = (i == 0 ? ecmd->argv[0] + 1 : ecmd->argv[i]);
+      int part_len = strlen(part);
+      if(len + part_len + (i > 0 ? 1 : 0) >= sizeof(msg)) {
+        printf("tooooo long\n");
+        break;
+      }
+      if(i > 0)
+        msg[len++] = ' ';
+      memmove(msg + len, part, part_len);
+      len += part_len;
+    }
+
+    if(len < sizeof(msg)) {
+      msg[len] = '\0';
+
+      // Print each word, coloring "os" in blue
+      char *token = msg;
+      while (*token) {
+        // Skip leading spaces
+        while (*token == ' ')
+          token++;
+
+        if (*token == '\0')
+          break;
+
+        // Find the end of the word
+        char *end = token;
+        while (*end && *end != ' ')
+          end++;
+
+        // Temporarily null-terminate the word
+        char saved = *end;
+        *end = '\0';
+
+        if (strcmp(token, "os") == 0)
+          printf("\033[34m%s\033[0m", token); // blue "os"
+        else
+          printf("%s", token);
+
+        *end = saved;
+
+        // Print the space if there's more text
+        if (*end)
+          printf(" ");
+
+        token = end;
+      }
+
+      printf("\n");
+    }
     break;
+  }
+
+  exec(ecmd->argv[0], ecmd->argv);
+  fprintf(2, "exec %s failed\n", ecmd->argv[0]);
+  break;
+
 
   case REDIR:
     rcmd = (struct redircmd*)cmd;
@@ -134,7 +201,7 @@ runcmd(struct cmd *cmd)
 int
 getcmd(char *buf, int nbuf)
 {
-  write(2, "$amin-parsa ", 12);
+  write(2, "amin_parsa$ ", 12);
   memset(buf, 0, nbuf);
   gets(buf, nbuf);
   if(buf[0] == 0) // EOF
