@@ -1,4 +1,5 @@
 struct stat;
+typedef unsigned int   uint;
 
 // system calls
 int fork(void);
@@ -22,6 +23,8 @@ int getpid(void);
 char* sbrk(int);
 int sleep(int);
 int uptime(void);
+// we added
+int trigger(int, const char*);
 
 // ulib.c
 int stat(const char*, struct stat*);

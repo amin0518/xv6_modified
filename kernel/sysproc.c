@@ -91,3 +91,18 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+// we added
+uint64
+sys_trigger(void){
+  int num;
+  char str[100];
+
+  argint(0, &num);
+  
+  
+  if(argstr(1, str, sizeof(str)) < 0)
+    return -1;
+    
+  return trigger(num, str);
+}
