@@ -15,7 +15,14 @@ main()
     printfinit();
     printf("\n");
     printf("xv6 kernel is booting\n");
-    printf("\n");
+    // we added
+    trigger(1, "Welcome to AUT MCS Priciples of operating system Course. "
+      "this message os from a custom  logger implemented by 40012033 and 40013072");
+    trigger(2, " This is a test warning message for the custom logger ");
+    trigger(3, "this is Test error message for the custom logger");        
+
+
+    printf("\n");  
     kinit();         // physical page allocator
     kvminit();       // create kernel page table
     kvminithart();   // turn on paging
