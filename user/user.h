@@ -44,3 +44,7 @@ void *memcpy(void *, const void *, uint);
 // umalloc.c
 void* malloc(uint);
 void free(void*);
+
+// 6 we added / changed
+int thread(void *start_thread, int *stack_address, void *arg);
+int jointhread(int id);

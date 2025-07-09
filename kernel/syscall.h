@@ -22,3 +22,6 @@
 #define SYS_close 21
 // we added
 #define SYS_trigger 22
+// 8 we added / changed
+#define SYS_thread 23
+#define SYS_jointhread 24

@@ -38,3 +38,6 @@ entry("sleep");
 entry("uptime");
 # we added
 entry("trigger");
+# 7 we added / changed
+entry("thread");
+entry("jointhread");

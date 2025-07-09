@@ -713,7 +713,6 @@ void procdump(void)
   }
 }
 
-
 // we added
 int trigger(int level, char* str) {
   switch(level) {
@@ -733,3 +732,129 @@ int trigger(int level, char* str) {
   return 0;
 }
 
+
+// 15 we added / changed
+struct thread *allocthread(uint64 start_thread, uint64 stack_address,
+                           uint64 arg)
+{
+  struct proc *p = myproc();
+  if (!initthread(p))
+    return 0;
+  for (struct thread *t = p->threads; t < p->threads + NTHREAD; t++)
+  {
+    if (t->state == THREAD_UNUSED)
+    {
+      t->id = allocpid();
+      if ((t->trapframe = (struct trapframe *)kalloc()) == 0)
+      {
+        freethread(t);
+        break;
+      }
+      t->state = THREAD_RUNNABLE;
+      *t->trapframe = *p->trapframe;
+      t->trapframe->sp = stack_address;
+      t->trapframe->a0 = arg;
+      t->trapframe->ra = -1;
+      t->trapframe->epc = (uint64)start_thread;
+      return t;
+    }
+  }
+  return 0;
+}
+
+// 16 we added / changed
+void freethread(struct thread *t)
+{
+  t->state = THREAD_UNUSED;
+  if (t->trapframe)
+    kfree((void *)t->trapframe);
+  t->trapframe = 0;
+  t->id = 0;
+  t->join = 0;
+}
+
+// 17 we added / changed
+void exitthread()
+{
+  struct proc *p = myproc();
+  uint id = p->current_thread->id;
+  for (struct thread *t = p->threads; t < p->threads + NTHREAD; t++)
+  {
+    if (t->state == THREAD_JOINED && t->join == id)
+    {
+      t->join = 0;
+      t->state = THREAD_RUNNABLE;
+    }
+  }
+  freethread(p->current_thread);
+  if (!thread_schd(p))
+    setkilled(p);
+}
+
+// 18 we added / changed
+int jointhread(uint join_id)
+{
+  struct proc *p = myproc();
+  struct thread *t = p->current_thread;
+  if (!t)
+    return -3;
+  int found = 0;
+  uint current_id = join_id;
+  while (current_id != 0)
+  {
+    if (current_id == t->id)
+      return -1; // deadlock
+    uint target_id = current_id;
+    current_id = 0;
+    for (int i = 0; i < NTHREAD; i++)
+    {
+      if (p->threads[i].id == target_id)
+      {
+        current_id = p->threads[i].join;
+        found = 1;
+        break;
+      }
+    }
+  }
+  if (!found)
+    return -2;
+  t->join = join_id;
+  t->state = THREAD_JOINED;
+  yield();
+  return 0;
+}
+
+// 19 we added / changed
+void sleepthread(int n, uint ticks0)
+{
+  struct thread *t = myproc()->current_thread;
+  t->sleep_n = n;
+  t->sleep_tick0 = ticks0;
+  t->state = THREAD_SLEEPING;
+  thread_schd(myproc());
+}
+
+// 20 we added / changed
+struct thread *
+initthread(struct proc *p)
+{
+  if (!p->current_thread)
+  {
+    for (int i = 0; i < NTHREAD; ++i)
+    {
+      p->threads[i].trapframe = 0;
+      freethread(&p->threads[i]);
+    }
+    // Initialize main thread
+    struct thread *t = &p->threads[0];
+    t->id = p->pid;
+    if ((t->trapframe = (struct trapframe *)kalloc()) == 0)
+    {
+      freethread(t);
+      return 0;
+    }
+    t->state = THREAD_RUNNING;
+    p->current_thread = t;
+  }
+  return p->current_thread;
+}
