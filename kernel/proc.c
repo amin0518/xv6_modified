@@ -926,3 +926,27 @@ void procinit(void)
   }
 }
 
+
+// 22 we added / changed
+static void freeproc(struct proc *p)
+{
+  if (p->trapframe)
+    kfree((void *)p->trapframe);
+  p->trapframe = 0;
+  if (p->pagetable)
+    proc_freepagetable(p->pagetable, p->sz);
+  p->pagetable = 0;
+  p->sz = 0;
+  p->pid = 0;
+  p->parent = 0;
+  p->name[0] = 0;
+  p->chan = 0;
+  p->killed = 0;
+  p->xstate = 0;
+  p->state = UNUSED;
+  p->current_thread = 0; // Reset current_thread to null
+  for (int i = 0; i < NTHREAD; ++i)
+  {
+    freethread(&p->threads[i]); // Free all threads associated with the process
+  }
+}
