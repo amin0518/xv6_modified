@@ -48,19 +48,28 @@ sys_sbrk(void)
   return addr;
 }
 
+
+// 24 we added / changed
 uint64
 sys_sleep(void)
 {
   int n;
   uint ticks0;
-
   argint(0, &n);
-  if(n < 0)
+  if (n < 0)
     n = 0;
   acquire(&tickslock);
   ticks0 = ticks;
-  while(ticks - ticks0 < n){
-    if(killed(myproc())){
+  if (myproc()->current_thread)
+  {
+    release(&tickslock);
+    sleepthread(n, ticks0);
+    return 0;
+  }
+  while (ticks - ticks0 < n)
+  {
+    if (killed(myproc()))
+    {
       release(&tickslock);
       return -1;
     }

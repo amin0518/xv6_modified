@@ -18,6 +18,10 @@ struct spinlock pid_lock;
 extern void forkret(void);
 static void freeproc(struct proc *p);
 
+// we added / changed
+struct thread *
+initthread(struct proc *p);
+int thread_schd(struct proc *p);
 extern char trampoline[]; // trampoline.S
 
 // helps ensure that wakeups of wait()ing
@@ -42,25 +46,26 @@ void proc_mapstacks(pagetable_t kpgtbl)
     kvmmap(kpgtbl, va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
   }
 }
+// we added / changed. this is original. the changed is belwo.
+// // initialize the proc table.
+// void procinit(void)
+// {
+//   struct proc *p;
 
-// initialize the proc table.
-void procinit(void)
-{
-  struct proc *p;
-
-  initlock(&pid_lock, "nextpid");
-  initlock(&wait_lock, "wait_lock");
-  for (p = proc; p < &proc[NPROC]; p++)
-  {
-    initlock(&p->lock, "proc");
-    p->state = UNUSED;
-    p->kstack = KSTACK((int)(p - proc));
-  }
-}
+//   initlock(&pid_lock, "nextpid");
+//   initlock(&wait_lock, "wait_lock");
+//   for (p = proc; p < &proc[NPROC]; p++)
+//   {
+//     initlock(&p->lock, "proc");
+//     p->state = UNUSED;
+//     p->kstack = KSTACK((int)(p - proc));
+//   }
+// }
 
 // Must be called with interrupts disabled,
 // to prevent race with process being moved
 // to a different CPU.
+
 int cpuid()
 {
   int id = r_tp();
@@ -153,27 +158,29 @@ found:
   return p;
 }
 
+
+// we added / changed. this is original. the changed is below.
 // free a proc structure and the data hanging from it,
 // including user pages.
 // p->lock must be held.
-static void
-freeproc(struct proc *p)
-{
-  if (p->trapframe)
-    kfree((void *)p->trapframe);
-  p->trapframe = 0;
-  if (p->pagetable)
-    proc_freepagetable(p->pagetable, p->sz);
-  p->pagetable = 0;
-  p->sz = 0;
-  p->pid = 0;
-  p->parent = 0;
-  p->name[0] = 0;
-  p->chan = 0;
-  p->killed = 0;
-  p->xstate = 0;
-  p->state = UNUSED;
-}
+// static void
+// freeproc(struct proc *p)
+// {
+//   if (p->trapframe)
+//     kfree((void *)p->trapframe);
+//   p->trapframe = 0;
+//   if (p->pagetable)
+//     proc_freepagetable(p->pagetable, p->sz);
+//   p->pagetable = 0;
+//   p->sz = 0;
+//   p->pid = 0;
+//   p->parent = 0;
+//   p->name[0] = 0;
+//   p->chan = 0;
+//   p->killed = 0;
+//   p->xstate = 0;
+//   p->state = UNUSED;
+// }
 
 // Create a user page table for a given process, with no user memory,
 // but with trampoline and trapframe pages.
@@ -455,47 +462,49 @@ int wait(uint64 addr)
 //  - swtch to start running that process.
 //  - eventually that process transfers control
 //    via swtch back to the scheduler.
-void scheduler(void)
-{
-  struct proc *p;
-  struct cpu *c = mycpu();
 
-  c->proc = 0;
-  for (;;)
-  {
-    // The most recent process to run may have had interrupts
-    // turned off; enable them to avoid a deadlock if all
-    // processes are waiting.
-    intr_on();
+// we added / changed. this is original. the changed is below.
+// void scheduler(void)
+// {
+//   struct proc *p;
+//   struct cpu *c = mycpu();
 
-    int found = 0;
-    for (p = proc; p < &proc[NPROC]; p++)
-    {
-      acquire(&p->lock);
-      if (p->state == RUNNABLE)
-      {
-        // Switch to chosen process.  It is the process's job
-        // to release its lock and then reacquire it
-        // before jumping back to us.
-        p->state = RUNNING;
-        c->proc = p;
-        swtch(&c->context, &p->context);
+//   c->proc = 0;
+//   for (;;)
+//   {
+//     // The most recent process to run may have had interrupts
+//     // turned off; enable them to avoid a deadlock if all
+//     // processes are waiting.
+//     intr_on();
 
-        // Process is done running for now.
-        // It should have changed its p->state before coming back.
-        c->proc = 0;
-        found = 1;
-      }
-      release(&p->lock);
-    }
-    if (found == 0)
-    {
-      // nothing to run; stop running on this core until an interrupt.
-      intr_on();
-      asm volatile("wfi");
-    }
-  }
-}
+//     int found = 0;
+//     for (p = proc; p < &proc[NPROC]; p++)
+//     {
+//       acquire(&p->lock);
+//       if (p->state == RUNNABLE)
+//       {
+//         // Switch to chosen process.  It is the process's job
+//         // to release its lock and then reacquire it
+//         // before jumping back to us.
+//         p->state = RUNNING;
+//         c->proc = p;
+//         swtch(&c->context, &p->context);
+
+//         // Process is done running for now.
+//         // It should have changed its p->state before coming back.
+//         c->proc = 0;
+//         found = 1;
+//       }
+//       release(&p->lock);
+//     }
+//     if (found == 0)
+//     {
+//       // nothing to run; stop running on this core until an interrupt.
+//       intr_on();
+//       asm volatile("wfi");
+//     }
+//   }
+// }
 
 // Switch to scheduler.  Must hold only p->lock
 // and have changed proc->state. Saves and restores
@@ -926,3 +935,69 @@ void procinit(void)
   }
 }
 
+
+// 22 we added / changed
+static void freeproc(struct proc *p)
+{
+  if (p->trapframe)
+    kfree((void *)p->trapframe);
+  p->trapframe = 0;
+  if (p->pagetable)
+    proc_freepagetable(p->pagetable, p->sz);
+  p->pagetable = 0;
+  p->sz = 0;
+  p->pid = 0;
+  p->parent = 0;
+  p->name[0] = 0;
+  p->chan = 0;
+  p->killed = 0;
+  p->xstate = 0;
+  p->state = UNUSED;
+  p->current_thread = 0; // Reset current_thread to null
+  for (int i = 0; i < NTHREAD; ++i)
+  {
+    freethread(&p->threads[i]); // Free all threads associated with the process
+  }
+}
+// 23 we added / changed
+void scheduler(void)
+{
+  struct proc *p;
+  struct cpu *c = mycpu();
+  c->proc = 0;
+  for (;;)
+  {
+    // The most recent process to run may have had interrupts
+    // turned off; enable them to avoid a deadlock if all
+    // processes are waiting.
+    intr_on();
+    int found = 0;
+    for (p = proc; p < &proc[NPROC]; p++)
+    {
+      acquire(&p->lock);
+      if (p->state == RUNNABLE)
+      {
+        // Switch to chosen process. It is the process's job
+        // to release its lock and then reacquire it
+        // before jumping back to us.
+        if (thread_schd(p))
+        {
+          p->state = RUNNING;
+          c->proc = p;
+          swtch(&c->context, &p->context);
+          // Process is done running for now.
+          // It should have changed its p->state before coming back.
+          c->proc = 0;
+          found = 1;
+        }
+      }
+      release(&p->lock);
+    }
+    if (found == 0)
+    {
+      // nothing to run; stop running on this core until an interrupt.
+      intr_on();
+      asm volatile("wfi");
+    }
+  }
+}
