@@ -18,6 +18,10 @@ struct spinlock pid_lock;
 extern void forkret(void);
 static void freeproc(struct proc *p);
 
+// we added / changed
+struct thread *
+initthread(struct proc *p);
+int thread_schd(struct proc *p);
 extern char trampoline[]; // trampoline.S
 
 // helps ensure that wakeups of wait()ing
@@ -42,25 +46,26 @@ void proc_mapstacks(pagetable_t kpgtbl)
     kvmmap(kpgtbl, va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
   }
 }
+// we added / changed. this is original. the changed is belwo.
+// // initialize the proc table.
+// void procinit(void)
+// {
+//   struct proc *p;
 
-// initialize the proc table.
-void procinit(void)
-{
-  struct proc *p;
-
-  initlock(&pid_lock, "nextpid");
-  initlock(&wait_lock, "wait_lock");
-  for (p = proc; p < &proc[NPROC]; p++)
-  {
-    initlock(&p->lock, "proc");
-    p->state = UNUSED;
-    p->kstack = KSTACK((int)(p - proc));
-  }
-}
+//   initlock(&pid_lock, "nextpid");
+//   initlock(&wait_lock, "wait_lock");
+//   for (p = proc; p < &proc[NPROC]; p++)
+//   {
+//     initlock(&p->lock, "proc");
+//     p->state = UNUSED;
+//     p->kstack = KSTACK((int)(p - proc));
+//   }
+// }
 
 // Must be called with interrupts disabled,
 // to prevent race with process being moved
 // to a different CPU.
+
 int cpuid()
 {
   int id = r_tp();
@@ -153,27 +158,29 @@ found:
   return p;
 }
 
+
+// we added / changed. this is original. the changed is below.
 // free a proc structure and the data hanging from it,
 // including user pages.
 // p->lock must be held.
-static void
-freeproc(struct proc *p)
-{
-  if (p->trapframe)
-    kfree((void *)p->trapframe);
-  p->trapframe = 0;
-  if (p->pagetable)
-    proc_freepagetable(p->pagetable, p->sz);
-  p->pagetable = 0;
-  p->sz = 0;
-  p->pid = 0;
-  p->parent = 0;
-  p->name[0] = 0;
-  p->chan = 0;
-  p->killed = 0;
-  p->xstate = 0;
-  p->state = UNUSED;
-}
+// static void
+// freeproc(struct proc *p)
+// {
+//   if (p->trapframe)
+//     kfree((void *)p->trapframe);
+//   p->trapframe = 0;
+//   if (p->pagetable)
+//     proc_freepagetable(p->pagetable, p->sz);
+//   p->pagetable = 0;
+//   p->sz = 0;
+//   p->pid = 0;
+//   p->parent = 0;
+//   p->name[0] = 0;
+//   p->chan = 0;
+//   p->killed = 0;
+//   p->xstate = 0;
+//   p->state = UNUSED;
+// }
 
 // Create a user page table for a given process, with no user memory,
 // but with trampoline and trapframe pages.
